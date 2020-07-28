@@ -1,11 +1,30 @@
+# Give super user permissions
 sudo: required
 
+# Specify docker as a dependency
 services:
   - docker
 
-
+# Build test version of react project
 before_install:
   - docker build -t ankitsah/react-test -f ./client/Dockerfile.dev ./client
 
+# Run tests
 script:
   - docker run -e CI=true ankitsah/react-test npm run test
+
+# Build prod versions of all projects
+after_success:
+  - docker build -t ankitsah/multi-client ./client
+  - docker build -t ankitsah/multi-nginx ./nginx
+  - docker build -t ankitsah/multi-server ./server
+  - docker build -t ankitsah/multi-worker ./worker
+  
+  # Login to Docker CLI
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_ID" --password-stdin
+ 
+  # Push to Docker Hub
+  - docker push ankitsah/multi-client
+  - docker push ankitsah/multi-nginx
+  - docker push ankitsah/multi-server
+  - docker push ankitsah/multi-worker
