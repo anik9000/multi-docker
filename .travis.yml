@@ -1,30 +1,34 @@
-# Give super user permissions
 sudo: required
-
-# Specify docker as a dependency
 services:
   - docker
 
-# Build test version of react project
 before_install:
   - docker build -t ankitsah/react-test -f ./client/Dockerfile.dev ./client
 
-# Run tests
 script:
-  - docker run -e CI=true ankitsah/react-test npm run test
+  - docker run ankitsah/react-test npm test -- --coverage
 
-# Build prod versions of all projects
 after_success:
   - docker build -t ankitsah/multi-client ./client
   - docker build -t ankitsah/multi-nginx ./nginx
   - docker build -t ankitsah/multi-server ./server
   - docker build -t ankitsah/multi-worker ./worker
-  
-  # Login to Docker CLI
+  # Log in to the docker CLI
   - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_ID" --password-stdin
- 
-  # Push to Docker Hub
+  # Take those images and push them to docker hub
   - docker push ankitsah/multi-client
   - docker push ankitsah/multi-nginx
   - docker push ankitsah/multi-server
   - docker push ankitsah/multi-worker
+
+deploy:
+  provider: elasticbeanstalk
+  region: ap-south-1
+  app: multi-docker
+  env: MultiDocker-env
+  bucket_name: elasticbeanstalk-ap-south-1-032167632275
+  bucket_path: docker-multi
+  on:
+    branch: master
+  access_key_id: $AWS_ACCESS_KEY
+  secret_access_key: $AWS_SECRET_KEY
